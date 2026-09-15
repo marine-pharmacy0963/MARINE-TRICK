@@ -114,13 +114,25 @@ document.getElementById("exportTheme").onclick=()=>{
  setTimeout(()=>URL.revokeObjectURL(u),1500);
  document.getElementById("themeDone").style.display="block";
 };
+function minifyPublicHtml(html){
+ // 公開HTMLのみを安全寄りに圧縮。textarea/pre/script/styleの内容を壊す強い変換は行わない。
+ const keep=[];
+ html=html.replace(/<(script|style|pre|textarea)\b[\s\S]*?<\/\1>/gi,m=>{const key=`___MT_KEEP_${keep.length}___`;keep.push(m);return key});
+ html=html.replace(/<!--(?!\[if)[\s\S]*?-->/g,"")
+          .replace(/>\s+</g,"><")
+          .replace(/[\t\r\n]+/g," ")
+          .replace(/ {2,}/g," ")
+          .trim();
+ keep.forEach((m,i)=>{html=html.replace(`___MT_KEEP_${i}___`,m)});
+ return html;
+}
 document.getElementById("export").onclick=()=>{
  let menu=data.filter(m=>m.visible).map(m=>{let ic="";if(m.iconType==="image"&&m.iconImage)ic='<div class="ico"><img src="'+m.iconImage+'" alt="" style="width:42px;height:42px;object-fit:contain"></div>';else if(m.iconType==="emoji"&&m.icon)ic='<div class="ico">'+E(m.icon)+'</div>';return '<a class="tile" href="'+E(m.href)+'">'+ic+'<div><b>'+E(m.name)+'</b><span>'+E(m.desc)+'</span></div></a>'}).join("");
  let mark="";const mt=document.getElementById("titleMarkType").value;if(mt==="emoji"&&document.getElementById("titleMarkEmoji").value)mark=E(document.getElementById("titleMarkEmoji").value)+" ";else if(mt==="image"&&titleMarkImage)mark='<img src="'+titleMarkImage+'" alt="" style="height:.9em;max-width:1.4em;object-fit:contain;vertical-align:-.08em;margin-right:.15em">';
  let lb=logo?'<img class="logo" src="'+logo+'" alt="MARINE PORTAL">':'<div class="fallback">'+mark+'MARINE PORTAL</div>';
  let bs=bg?'<style>body{background-image:linear-gradient(rgba(0,55,90,.12),rgba(0,35,65,.28)),url("'+bg+'")}</style>':"";
  let protect=document.getElementById("allowPublicImageSave").checked?"":"<style>img{-webkit-user-drag:none;-webkit-touch-callout:none;user-select:none}</style><script>document.addEventListener(\"contextmenu\",e=>{if(e.target.closest(\"img\"))e.preventDefault()});document.addEventListener(\"dragstart\",e=>{if(e.target.closest(\"img\"))e.preventDefault()});<\/script>";let now=new Date().toLocaleString("ja-JP");let out=TEMPLATE.replace("__LOGO__",lb).replace("__NEWS__",E(document.getElementById("news").value)).replace("__DATE__",E(document.getElementById("date").value)).replace("__MENU__",menu).replace("__BG__",bs+protect).replace("</nav>","</nav><div style=\"text-align:center;color:#fff;font-size:11px;padding:16px 0\">更新："+E(now)+"</div>");
- let u=URL.createObjectURL(new Blob([out],{type:"text/html;charset=utf-8"})),a=document.createElement("a");a.href=u;a.download="index.html";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);
+ out=minifyPublicHtml(out);let u=URL.createObjectURL(new Blob([out],{type:"text/html;charset=utf-8"})),a=document.createElement("a");a.href=u;a.download="index.html";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);
 };
 document.getElementById("news").addEventListener("input",queueSave);
 document.getElementById("date").addEventListener("input",queueSave);
